@@ -1,4 +1,4 @@
--- Barny: Portal Gun v6 — Часть 1/2 (портал как на 2-й картинке)
+-- Barny: Portal Gun v8 — Часть 1/2 (портал на любую поверхность + 2 скина)
 local Players = game:GetService("Players")
 local RS = game:GetService("RunService")
 local LP = Players.LocalPlayer
@@ -11,8 +11,9 @@ _G.BarnyPortal.NextPortal = "A"
 _G.BarnyPortal.LastTP = 0
 _G.BarnyPortal.TELEPORT_CD = 1.5
 _G.BarnyPortal.SavedPos = nil
-_G.BarnyPortal.PortalColor = Color3.fromRGB(255, 200, 50)
+_G.BarnyPortal.PortalColor = Color3.fromRGB(80, 255, 100)
 _G.BarnyPortal.CurrentGun = nil
+_G.BarnyPortal.Skin = "Original" -- "Original" или "Golden"
 
 local Colors = {
     {name = "Зелёный", color = Color3.fromRGB(80, 255, 100)},
@@ -27,7 +28,7 @@ local Colors = {
     {name = "Чёрный", color = Color3.fromRGB(60, 60, 60)},
 }
 _G.BarnyPortal.Colors = Colors
-_G.BarnyPortal.ColorIndex = 5 -- Жёлтый по умолчанию
+_G.BarnyPortal.ColorIndex = 1
 
 local function P(n, s, p, c, m, par, cl)
     local x = Instance.new("Part")
@@ -44,68 +45,49 @@ end
 
 _G.BarnyPortal.P = P
 
--- ========== ПОРТАЛ (как на 2-й картинке) ==========
-local function CreatePortal(parent, pos, faceTowards, name, color)
+-- ========== ПОРТАЛ (ложится на любую поверхность) ==========
+local function CreatePortal(parent, pos, normal, name, color)
     local m = Instance.new("Model")
     m.Name = name
     local col = color or _G.BarnyPortal.PortalColor
     
-    local lookCF = CFrame.lookAt(pos, Vector3.new(faceTowards.X, pos.Y, faceTowards.Z))
+    local lookCF = CFrame.lookAt(pos, pos + normal)
     
-    -- ОСНОВА (ровный круг через Sphere + SpecialMesh)
-    local portal = P("Oval", Vector3.new(9, 9, 0.3), pos, col, Enum.Material.Neon, m)
-    portal.Shape = Enum.PartType.Ball
-    portal.CFrame = lookCF
-    portal.CanCollide = false
-    portal.CanTouch = true
-    portal.Transparency = 0.1
+    local oval = P("Oval", Vector3.new(0.3, 9, 9), pos, col, Enum.Material.Neon, m)
+    oval.Shape = Enum.PartType.Cylinder
+    oval.CFrame = lookCF * CFrame.Angles(0, 0, math.rad(90))
+    oval.CanCollide = false
+    oval.CanTouch = true
+    oval.Transparency = 0.1
     
-    local mesh = Instance.new("SpecialMesh")
-    mesh.MeshType = Enum.MeshType.Sphere
-    mesh.Scale = Vector3.new(1, 1, 0.05)
-    mesh.Parent = portal
-    
-    -- ВНУТРЕННИЙ ВИХРЬ
-    local inner = P("Inner", Vector3.new(8.5, 8.5, 0.4), pos, Color3.fromRGB(20, 100, 20), Enum.Material.SmoothPlastic, m)
-    inner.Shape = Enum.PartType.Ball
-    inner.CFrame = lookCF
+    local inner = P("Inner", Vector3.new(0.4, 8, 8), pos, Color3.fromRGB(20, 100, 20), Enum.Material.SmoothPlastic, m)
+    inner.Shape = Enum.PartType.Cylinder
+    inner.CFrame = lookCF * CFrame.Angles(0, 0, math.rad(90))
     inner.CanCollide = false
     inner.CanTouch = false
     inner.Transparency = 0.2
     
-    local innerMesh = Instance.new("SpecialMesh")
-    innerMesh.MeshType = Enum.MeshType.Sphere
-    innerMesh.Scale = Vector3.new(1, 1, 0.05)
-    innerMesh.Parent = inner
-    
-    -- СПИРАЛЬ (текстура)
-    local swirl = P("Swirl", Vector3.new(8, 8, 0.5), pos, col, Enum.Material.Neon, m)
-    swirl.Shape = Enum.PartType.Ball
-    swirl.CFrame = lookCF
+    local swirl = P("Swirl", Vector3.new(0.35, 7.5, 7.5), pos, col, Enum.Material.Neon, m)
+    swirl.Shape = Enum.PartType.Cylinder
+    swirl.CFrame = lookCF * CFrame.Angles(0, 0, math.rad(90))
     swirl.CanCollide = false
     swirl.CanTouch = false
     swirl.Transparency = 0.15
     
-    local swirlMesh = Instance.new("SpecialMesh")
-    swirlMesh.MeshType = Enum.MeshType.Sphere
-    swirlMesh.Scale = Vector3.new(1, 1, 0.05)
-    swirlMesh.Parent = swirl
+    local tex = Instance.new("Texture")
+    tex.Texture = "rbxassetid://131237241"
+    tex.Face = Enum.NormalId.Right
+    tex.Transparency = 0.1
+    tex.Color3 = col
+    tex.Parent = swirl
     
-    local decal = Instance.new("Decal")
-    decal.Texture = "rbxassetid://131237241"
-    decal.Face = Enum.NormalId.Front
-    decal.Transparency = 0.2
-    decal.Color3 = col
-    decal.Parent = swirl
+    local tex2 = Instance.new("Texture")
+    tex2.Texture = "rbxassetid://131237241"
+    tex2.Face = Enum.NormalId.Left
+    tex2.Transparency = 0.1
+    tex2.Color3 = col
+    tex2.Parent = swirl
     
-    local decal2 = Instance.new("Decal")
-    decal2.Texture = "rbxassetid://131237241"
-    decal2.Face = Enum.NormalId.Back
-    decal2.Transparency = 0.2
-    decal2.Color3 = col
-    decal2.Parent = swirl
-    
-    -- БЕЛЫЕ ТОЧКИ
     for i = 1, 30 do
         local angle = math.random() * math.pi * 2
         local radius = math.random(10, 40) / 10
@@ -114,32 +96,30 @@ local function CreatePortal(parent, pos, faceTowards, name, color)
         
         local spot = P("Spot"..i, Vector3.new(0.5, 0.5, 0.5), pos, Color3.fromRGB(255, 255, 255), Enum.Material.Neon, m)
         spot.Shape = Enum.PartType.Ball
-        spot.CFrame = lookCF * CFrame.new(x, y, 0.35)
+        spot.CFrame = lookCF * CFrame.new(x, y, 0.2)
         spot.CanCollide = false
         spot.CanTouch = false
         spot.Transparency = math.random(20, 40) / 100
     end
     
-    -- СВЕТ
     local light = Instance.new("PointLight")
     light.Color = col
     light.Range = 20
     light.Brightness = 4
-    light.Parent = portal
+    light.Parent = oval
     
-    -- ВРАЩЕНИЕ СПИРАЛИ
     task.spawn(function()
         local spin = 0
         while swirl.Parent do
             spin = spin + 0.05
-            swirl.CFrame = lookCF * CFrame.Angles(0, 0, spin)
+            swirl.CFrame = lookCF * CFrame.Angles(0, 0, math.rad(90) + spin)
             RS.Heartbeat:Wait()
         end
     end)
     
-    m.PrimaryPart = portal
+    m.PrimaryPart = oval
     m.Parent = parent
-    return m, portal
+    return m, oval
 end
 
 _G.BarnyPortal.CreatePortal = CreatePortal
@@ -166,7 +146,7 @@ end
 
 _G.BarnyPortal.SetupTP = SetupTP
 
--- ========== ПУШКА (маленький блоб) ==========
+-- ========== ПУШКА (2 скина) ==========
 local function GivePortalGun()
     local char = LP.Character
     if not char then return end
@@ -176,73 +156,171 @@ local function GivePortalGun()
     tool.Name = "Portal Gun"
     tool.RequiresHandle = true
     
+    local col = _G.BarnyPortal.PortalColor
+    local skin = _G.BarnyPortal.Skin
+    
+    -- Цвета для скинов
+    local handleColor, bodyColor, headColor, gripColor, orbColor, eyeColor
+    
+    if skin == "Golden" then
+        handleColor = Color3.fromRGB(200, 170, 50)
+        bodyColor = Color3.fromRGB(220, 190, 60)
+        headColor = Color3.fromRGB(180, 150, 40)
+        gripColor = Color3.fromRGB(40, 40, 40)
+        orbColor = Color3.fromRGB(255, 240, 100)
+        eyeColor = Color3.fromRGB(40, 150, 220)
+    else
+        handleColor = Color3.fromRGB(180, 180, 180)
+        bodyColor = Color3.fromRGB(200, 200, 200)
+        headColor = Color3.fromRGB(160, 160, 160)
+        gripColor = Color3.fromRGB(160, 160, 160)
+        orbColor = col
+        eyeColor = Color3.fromRGB(40, 40, 40)
+    end
+    
+    -- HANDLE
     local handle = Instance.new("Part")
     handle.Name = "Handle"
-    handle.Size = Vector3.new(0.6, 0.8, 0.6)
-    handle.Color = _G.BarnyPortal.PortalColor
-    handle.Material = Enum.Material.Neon
-    handle.Shape = Enum.PartType.Ball
+    handle.Size = Vector3.new(0.5, 1, 2)
+    handle.Color = handleColor
+    handle.Material = Enum.Material.SmoothPlastic
     handle.Parent = tool
     
-    local base = Instance.new("Part")
-    base.Name = "Base"
-    base.Size = Vector3.new(1.2, 0.4, 0.8)
-    base.Color = Color3.fromRGB(240, 240, 240)
-    base.Material = Enum.Material.SmoothPlastic
-    base.CFrame = handle.CFrame * CFrame.new(0, -0.6, 0)
-    base.Parent = tool
+    -- BODY
+    local body = Instance.new("Part")
+    body.Name = "Body"
+    body.Size = Vector3.new(1, 0.7, 2.5)
+    body.Color = bodyColor
+    body.Material = Enum.Material.SmoothPlastic
+    body.CFrame = handle.CFrame * CFrame.new(0, 0.5, -0.8)
+    body.Parent = tool
     local w1 = Instance.new("Weld")
     w1.Part0 = handle
-    w1.Part1 = base
-    w1.C0 = CFrame.new(0, -0.6, 0)
+    w1.Part1 = body
+    w1.C0 = CFrame.new(0, 0.5, -0.8)
     w1.Parent = handle
     
-    local crystal = Instance.new("Part")
-    crystal.Name = "Crystal"
-    crystal.Size = Vector3.new(0.7, 1.0, 0.7)
-    crystal.Color = _G.BarnyPortal.PortalColor
-    crystal.Material = Enum.Material.Neon
-    crystal.Shape = Enum.PartType.Ball
-    crystal.CFrame = handle.CFrame * CFrame.new(0, 0.3, 0)
-    crystal.Parent = tool
+    -- HEAD (передняя часть)
+    local head = Instance.new("Part")
+    head.Name = "Head"
+    head.Size = Vector3.new(1.2, 1, 1.2)
+    head.Color = headColor
+    head.Material = Enum.Material.SmoothPlastic
+    head.CFrame = body.CFrame * CFrame.new(0, 0.1, -1.8)
+    head.Parent = tool
     local w2 = Instance.new("Weld")
     w2.Part0 = handle
-    w2.Part1 = crystal
-    w2.C0 = CFrame.new(0, 0.3, 0)
+    w2.Part1 = head
+    w2.C0 = CFrame.new(0, 0.6, -2.6)
     w2.Parent = handle
     
-    local light = Instance.new("PointLight")
-    light.Color = _G.BarnyPortal.PortalColor
-    light.Range = 10
-    light.Brightness = 5
-    light.Parent = crystal
-    
-    local button = Instance.new("Part")
-    button.Name = "Button"
-    button.Size = Vector3.new(0.15, 0.15, 0.15)
-    button.Color = Color3.fromRGB(255, 50, 50)
-    button.Material = Enum.Material.Neon
-    button.Shape = Enum.PartType.Ball
-    button.CFrame = base.CFrame * CFrame.new(-0.4, 0.15, 0.3)
-    button.Parent = tool
+    -- EYE (глаз)
+    local eye = Instance.new("Part")
+    eye.Name = "Eye"
+    eye.Size = Vector3.new(0.6, 0.6, 0.25)
+    eye.Color = eyeColor
+    eye.Material = Enum.Material.Neon
+    eye.Shape = Enum.PartType.Cylinder
+    eye.CFrame = head.CFrame * CFrame.new(0, 0, -0.6) * CFrame.Angles(0, math.rad(90), 0)
+    eye.Parent = tool
     local w3 = Instance.new("Weld")
     w3.Part0 = handle
-    w3.Part1 = button
-    w3.C0 = CFrame.new(-0.4, -0.45, 0.3)
+    w3.Part1 = eye
+    w3.C0 = CFrame.new(0, 0.6, -3.2) * CFrame.Angles(0, math.rad(90), 0)
     w3.Parent = handle
     
-    local antenna = Instance.new("Part")
-    antenna.Name = "Antenna"
-    antenna.Size = Vector3.new(0.15, 0.5, 0.15)
-    antenna.Color = Color3.fromRGB(40, 40, 40)
-    antenna.Material = Enum.Material.SmoothPlastic
-    antenna.CFrame = base.CFrame * CFrame.new(0.4, 0.4, 0)
-    antenna.Parent = tool
+    local eyeLight = Instance.new("PointLight")
+    eyeLight.Color = eyeColor
+    eyeLight.Range = 10
+    eyeLight.Brightness = 4
+    eyeLight.Parent = eye
+    
+    -- ORB (сфера на конце)
+    local orb = Instance.new("Part")
+    orb.Name = "Orb"
+    orb.Size = Vector3.new(0.7, 0.7, 0.7)
+    orb.Color = orbColor
+    orb.Material = Enum.Material.Neon
+    orb.Shape = Enum.PartType.Ball
+    orb.CFrame = head.CFrame * CFrame.new(0, 0, -0.9)
+    orb.Parent = tool
     local w4 = Instance.new("Weld")
     w4.Part0 = handle
-    w4.Part1 = antenna
-    w4.C0 = CFrame.new(0.4, -0.2, 0)
+    w4.Part1 = orb
+    w4.C0 = CFrame.new(0, 0.6, -3.5)
     w4.Parent = handle
+    
+    local orbLight = Instance.new("PointLight")
+    orbLight.Color = orbColor
+    orbLight.Range = 15
+    orbLight.Brightness = 6
+    orbLight.Parent = orb
+    
+    -- FLASK (колба сверху)
+    local flask = Instance.new("Part")
+    flask.Name = "Flask"
+    flask.Size = Vector3.new(0.5, 1.1, 0.5)
+    flask.Color = col
+    flask.Material = Enum.Material.Neon
+    flask.Shape = Enum.PartType.Cylinder
+    flask.CFrame = body.CFrame * CFrame.new(0.2, 0.8, 0)
+    flask.Parent = tool
+    local w5 = Instance.new("Weld")
+    w5.Part0 = handle
+    w5.Part1 = flask
+    w5.C0 = CFrame.new(0.2, 1.3, -0.8)
+    w5.Parent = handle
+    
+    local flaskLight = Instance.new("PointLight")
+    flaskLight.Color = col
+    flaskLight.Range = 10
+    flaskLight.Brightness = 4
+    flaskLight.Parent = flask
+    
+    -- FLASK CAP
+    local flaskCap = Instance.new("Part")
+    flaskCap.Name = "FlaskCap"
+    flaskCap.Size = Vector3.new(0.6, 0.15, 0.6)
+    flaskCap.Color = Color3.fromRGB(200, 200, 200)
+    flaskCap.Material = Enum.Material.SmoothPlastic
+    flaskCap.Shape = Enum.PartType.Cylinder
+    flaskCap.CFrame = flask.CFrame * CFrame.new(0, 0.65, 0)
+    flaskCap.Parent = tool
+    local w6 = Instance.new("Weld")
+    w6.Part0 = handle
+    w6.Part1 = flaskCap
+    w6.C0 = CFrame.new(0.2, 1.95, -0.8)
+    w6.Parent = handle
+    
+    -- GRIP (рукоятка снизу)
+    local grip = Instance.new("Part")
+    grip.Name = "Grip"
+    grip.Size = Vector3.new(0.4, 0.8, 1)
+    grip.Color = gripColor
+    grip.Material = Enum.Material.SmoothPlastic
+    grip.CFrame = handle.CFrame * CFrame.new(0, -0.7, 0.3)
+    grip.Parent = tool
+    local w7 = Instance.new("Weld")
+    w7.Part0 = handle
+    w7.Part1 = grip
+    w7.C0 = CFrame.new(0, -0.7, 0.3)
+    w7.Parent = handle
+    
+    -- RED BUTTON (только для Original)
+    if skin == "Original" then
+        local redBtn = Instance.new("Part")
+        redBtn.Name = "RedButton"
+        redBtn.Size = Vector3.new(0.4, 0.1, 0.3)
+        redBtn.Color = Color3.fromRGB(220, 40, 40)
+        redBtn.Material = Enum.Material.SmoothPlastic
+        redBtn.CFrame = body.CFrame * CFrame.new(-0.3, 0.4, 0.3)
+        redBtn.Parent = tool
+        local w8 = Instance.new("Weld")
+        w8.Part0 = handle
+        w8.Part1 = redBtn
+        w8.C0 = CFrame.new(-0.3, 0.9, -0.5)
+        w8.Parent = handle
+    end
     
     tool.Activated:Connect(function()
         local c = tool.Parent
@@ -258,12 +336,13 @@ local function GivePortalGun()
                 rp.FilterType = Enum.RaycastFilterType.Exclude
                 rp.FilterDescendantsInstances = {c}
                 local groundCheck = workspace:Raycast(spawnPos + Vector3.new(0, 10, 0), Vector3.new(0, -30, 0), rp)
+                local normal = Vector3.new(0, 1, 0)
                 if groundCheck then
                     spawnPos = Vector3.new(spawnPos.X, groundCheck.Position.Y + 5, spawnPos.Z)
+                    normal = groundCheck.Normal
                 end
-                local faceTowards = hrp.Position
                 if _G.BarnyPortal.PortalA and _G.BarnyPortal.PortalA.Parent then _G.BarnyPortal.PortalA:Destroy() end
-                _G.BarnyPortal.PortalA = CreatePortal(workspace, spawnPos, faceTowards, "PortalA", _G.BarnyPortal.PortalColor)
+                _G.BarnyPortal.PortalA = CreatePortal(workspace, spawnPos, normal, "PortalA", _G.BarnyPortal.PortalColor)
                 _G.BarnyPortal.NextPortal = "B"
             else
                 local cam = workspace.CurrentCamera
@@ -275,9 +354,9 @@ local function GivePortalGun()
                 local res = workspace:Raycast(origin, direction, rp)
                 if not res then return end
                 local hp = res.Position
-                local faceTowards = hrp.Position
+                local normal = res.Normal
                 if _G.BarnyPortal.PortalB and _G.BarnyPortal.PortalB.Parent then _G.BarnyPortal.PortalB:Destroy() end
-                _G.BarnyPortal.PortalB = CreatePortal(workspace, hp, faceTowards, "PortalB", _G.BarnyPortal.PortalColor)
+                _G.BarnyPortal.PortalB = CreatePortal(workspace, hp, normal, "PortalB", _G.BarnyPortal.PortalColor)
                 _G.BarnyPortal.NextPortal = "A"
             end
             if _G.BarnyPortal.PortalA and _G.BarnyPortal.PortalB then
@@ -317,9 +396,23 @@ local c = Instance.new("UICorner")
 c.CornerRadius = UDim.new(0, 8)
 c.Parent = gunBtn
 
+-- Кнопка скина
+local skinBtn = Instance.new("TextButton")
+skinBtn.Size = UDim2.new(0, 180, 0, 35)
+skinBtn.Position = UDim2.new(0, 5, 0, 90)
+skinBtn.BackgroundColor3 = Color3.fromRGB(100, 80, 0)
+skinBtn.Text = "СКИН: ОРИГИНАЛЬНЫЙ"
+skinBtn.TextColor3 = Color3.fromRGB(255, 220, 100)
+skinBtn.Font = Enum.Font.Code
+skinBtn.TextSize = 11
+skinBtn.Parent = sg
+local sc = Instance.new("UICorner")
+sc.CornerRadius = UDim.new(0, 8)
+sc.Parent = skinBtn
+
 local modeBtn = Instance.new("TextButton")
 modeBtn.Size = UDim2.new(0, 180, 0, 35)
-modeBtn.Position = UDim2.new(0, 5, 0, 90)
+modeBtn.Position = UDim2.new(0, 5, 0, 130)
 modeBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 150)
 modeBtn.Text = "РЕЖИМ: ОБЫЧНЫЙ"
 modeBtn.TextColor3 = Color3.fromRGB(200, 200, 255)
@@ -330,9 +423,10 @@ local mc = Instance.new("UICorner")
 mc.CornerRadius = UDim.new(0, 8)
 mc.Parent = modeBtn
 
+-- Цвет
 local colorFrame = Instance.new("Frame")
 colorFrame.Size = UDim2.new(0, 180, 0, 35)
-colorFrame.Position = UDim2.new(0, 5, 0, 130)
+colorFrame.Position = UDim2.new(0, 5, 0, 170)
 colorFrame.BackgroundColor3 = _G.BarnyPortal.PortalColor
 colorFrame.BorderSizePixel = 0
 colorFrame.Parent = sg
@@ -398,6 +492,22 @@ end)
 
 gunBtn.MouseButton1Click:Connect(GivePortalGun)
 
+-- Переключение скина
+skinBtn.MouseButton1Click:Connect(function()
+    if _G.BarnyPortal.Skin == "Original" then
+        _G.BarnyPortal.Skin = "Golden"
+        skinBtn.Text = "СКИН: ЗОЛОТОЙ"
+        skinBtn.BackgroundColor3 = Color3.fromRGB(180, 140, 0)
+        skinBtn.TextColor3 = Color3.fromRGB(255, 240, 100)
+    else
+        _G.BarnyPortal.Skin = "Original"
+        skinBtn.Text = "СКИН: ОРИГИНАЛЬНЫЙ"
+        skinBtn.BackgroundColor3 = Color3.fromRGB(100, 80, 0)
+        skinBtn.TextColor3 = Color3.fromRGB(255, 220, 100)
+    end
+    GivePortalGun()
+end)
+
 modeBtn.MouseButton1Click:Connect(function()
     if _G.BarnyPortal.Mode == "Normal" then
         _G.BarnyPortal.Mode = "Infinite"
@@ -412,4 +522,4 @@ modeBtn.MouseButton1Click:Connect(function()
     end
 end)
 
-print("[Barny] Часть 1/2 загружена (портал как на 2-й картинке)")
+print("[Barny] Часть 1/2 загружена (портал + 2 скина)")

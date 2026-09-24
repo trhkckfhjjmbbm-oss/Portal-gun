@@ -1,4 +1,4 @@
--- Barny: Portal Gun v5 — Часть 1/2 (портал овальный + пушка-блоб)
+-- Barny: Portal Gun v6 — Часть 1/2 (портал как на 2-й картинке)
 local Players = game:GetService("Players")
 local RS = game:GetService("RunService")
 local LP = Players.LocalPlayer
@@ -11,7 +11,7 @@ _G.BarnyPortal.NextPortal = "A"
 _G.BarnyPortal.LastTP = 0
 _G.BarnyPortal.TELEPORT_CD = 1.5
 _G.BarnyPortal.SavedPos = nil
-_G.BarnyPortal.PortalColor = Color3.fromRGB(80, 255, 100)
+_G.BarnyPortal.PortalColor = Color3.fromRGB(255, 200, 50)
 _G.BarnyPortal.CurrentGun = nil
 
 local Colors = {
@@ -19,7 +19,7 @@ local Colors = {
     {name = "Синий", color = Color3.fromRGB(80, 150, 255)},
     {name = "Красный", color = Color3.fromRGB(255, 80, 80)},
     {name = "Фиолетовый", color = Color3.fromRGB(180, 80, 255)},
-    {name = "Жёлтый", color = Color3.fromRGB(255, 255, 80)},
+    {name = "Жёлтый", color = Color3.fromRGB(255, 200, 50)},
     {name = "Оранжевый", color = Color3.fromRGB(255, 150, 50)},
     {name = "Розовый", color = Color3.fromRGB(255, 130, 200)},
     {name = "Голубой", color = Color3.fromRGB(100, 255, 255)},
@@ -27,7 +27,7 @@ local Colors = {
     {name = "Чёрный", color = Color3.fromRGB(60, 60, 60)},
 }
 _G.BarnyPortal.Colors = Colors
-_G.BarnyPortal.ColorIndex = 1
+_G.BarnyPortal.ColorIndex = 5 -- Жёлтый по умолчанию
 
 local function P(n, s, p, c, m, par, cl)
     local x = Instance.new("Part")
@@ -44,99 +44,102 @@ end
 
 _G.BarnyPortal.P = P
 
--- ========== ОВАЛЬНЫЙ ПОРТАЛ (как на картинке) ==========
+-- ========== ПОРТАЛ (как на 2-й картинке) ==========
 local function CreatePortal(parent, pos, faceTowards, name, color)
     local m = Instance.new("Model")
     m.Name = name
     local col = color or _G.BarnyPortal.PortalColor
     
-    -- CFrame: смотрит на игрока (вертикально)
     local lookCF = CFrame.lookAt(pos, Vector3.new(faceTowards.X, pos.Y, faceTowards.Z))
     
-    -- ОСНОВА — овал (высокий цилиндр, сплюснутый)
-    -- Используем Cylinder с разными размерами (высота больше ширины)
-    local oval = P("Oval", Vector3.new(0.4, 9, 6), pos, col, Enum.Material.Neon, m)
-    oval.Shape = Enum.PartType.Cylinder
-    oval.CFrame = lookCF * CFrame.Angles(0, 0, math.rad(90))
-    oval.CanCollide = false
-    oval.CanTouch = true
-    oval.Transparency = 0.1
+    -- ОСНОВА (ровный круг через Sphere + SpecialMesh)
+    local portal = P("Oval", Vector3.new(9, 9, 0.3), pos, col, Enum.Material.Neon, m)
+    portal.Shape = Enum.PartType.Ball
+    portal.CFrame = lookCF
+    portal.CanCollide = false
+    portal.CanTouch = true
+    portal.Transparency = 0.1
     
-    -- Тёмная внутренняя часть
-    local inner = P("Inner", Vector3.new(0.5, 8, 5.2), pos, Color3.fromRGB(20, 100, 20), Enum.Material.SmoothPlastic, m)
-    inner.Shape = Enum.PartType.Cylinder
-    inner.CFrame = lookCF * CFrame.Angles(0, 0, math.rad(90))
+    local mesh = Instance.new("SpecialMesh")
+    mesh.MeshType = Enum.MeshType.Sphere
+    mesh.Scale = Vector3.new(1, 1, 0.05)
+    mesh.Parent = portal
+    
+    -- ВНУТРЕННИЙ ВИХРЬ
+    local inner = P("Inner", Vector3.new(8.5, 8.5, 0.4), pos, Color3.fromRGB(20, 100, 20), Enum.Material.SmoothPlastic, m)
+    inner.Shape = Enum.PartType.Ball
+    inner.CFrame = lookCF
     inner.CanCollide = false
     inner.CanTouch = false
     inner.Transparency = 0.2
     
-    -- ВИХРЬ 1 (спираль)
-    local swirl1 = P("Swirl1", Vector3.new(0.3, 8.2, 5.4), pos, col, Enum.Material.Neon, m)
-    swirl1.Shape = Enum.PartType.Cylinder
-    swirl1.CFrame = lookCF * CFrame.Angles(0, 0, math.rad(90))
-    swirl1.CanCollide = false
-    swirl1.CanTouch = false
-    swirl1.Transparency = 0.15
+    local innerMesh = Instance.new("SpecialMesh")
+    innerMesh.MeshType = Enum.MeshType.Sphere
+    innerMesh.Scale = Vector3.new(1, 1, 0.05)
+    innerMesh.Parent = inner
     
-    -- Текстура спирали
-    local tex1 = Instance.new("Texture")
-    tex1.Texture = "rbxassetid://131237241"
-    tex1.Face = Enum.NormalId.Right
-    tex1.Transparency = 0.1
-    tex1.Color3 = col
-    tex1.Parent = swirl1
+    -- СПИРАЛЬ (текстура)
+    local swirl = P("Swirl", Vector3.new(8, 8, 0.5), pos, col, Enum.Material.Neon, m)
+    swirl.Shape = Enum.PartType.Ball
+    swirl.CFrame = lookCF
+    swirl.CanCollide = false
+    swirl.CanTouch = false
+    swirl.Transparency = 0.15
     
-    -- ВИХРЬ 2 (второй слой)
-    local swirl2 = P("Swirl2", Vector3.new(0.35, 6.5, 4.2), pos, col, Enum.Material.Neon, m)
-    swirl2.Shape = Enum.PartType.Cylinder
-    swirl2.CFrame = lookCF * CFrame.Angles(0, 0, math.rad(90))
-    swirl2.CanCollide = false
-    swirl2.CanTouch = false
-    swirl2.Transparency = 0.25
+    local swirlMesh = Instance.new("SpecialMesh")
+    swirlMesh.MeshType = Enum.MeshType.Sphere
+    swirlMesh.Scale = Vector3.new(1, 1, 0.05)
+    swirlMesh.Parent = swirl
     
-    local tex2 = Instance.new("Texture")
-    tex2.Texture = "rbxassetid://131237241"
-    tex2.Face = Enum.NormalId.Right
-    tex2.Transparency = 0.2
-    tex2.Color3 = col
-    tex2.Parent = swirl2
+    local decal = Instance.new("Decal")
+    decal.Texture = "rbxassetid://131237241"
+    decal.Face = Enum.NormalId.Front
+    decal.Transparency = 0.2
+    decal.Color3 = col
+    decal.Parent = swirl
     
-    -- БЕЛЫЕ ТОЧКИ (как на картинке)
-    for i = 1, 25 do
-        local spot = P("Spot"..i, Vector3.new(0.6, 0.6, 0.6), pos, Color3.fromRGB(255, 255, 255), Enum.Material.Neon, m)
-        spot.Shape = Enum.PartType.Ball
-        -- Случайное расположение внутри овала
+    local decal2 = Instance.new("Decal")
+    decal2.Texture = "rbxassetid://131237241"
+    decal2.Face = Enum.NormalId.Back
+    decal2.Transparency = 0.2
+    decal2.Color3 = col
+    decal2.Parent = swirl
+    
+    -- БЕЛЫЕ ТОЧКИ
+    for i = 1, 30 do
         local angle = math.random() * math.pi * 2
-        local radius = math.random(15, 40) / 10
+        local radius = math.random(10, 40) / 10
         local x = math.cos(angle) * radius
-        local y = math.sin(angle) * radius * 1.5 -- вытянутый по вертикали
-        spot.CFrame = lookCF * CFrame.new(x, y, 0.15) * CFrame.Angles(0, 0, 0)
+        local y = math.sin(angle) * radius
+        
+        local spot = P("Spot"..i, Vector3.new(0.5, 0.5, 0.5), pos, Color3.fromRGB(255, 255, 255), Enum.Material.Neon, m)
+        spot.Shape = Enum.PartType.Ball
+        spot.CFrame = lookCF * CFrame.new(x, y, 0.35)
         spot.CanCollide = false
         spot.CanTouch = false
-        spot.Transparency = math.random(20, 50) / 100
+        spot.Transparency = math.random(20, 40) / 100
     end
     
-    -- СВЕТ (мягкий)
+    -- СВЕТ
     local light = Instance.new("PointLight")
     light.Color = col
     light.Range = 20
     light.Brightness = 4
-    light.Parent = oval
+    light.Parent = portal
     
-    -- ВРАЩЕНИЕ вихрей
+    -- ВРАЩЕНИЕ СПИРАЛИ
     task.spawn(function()
         local spin = 0
-        while swirl1.Parent do
-            spin = spin + 0.12
-            swirl1.CFrame = lookCF * CFrame.Angles(0, 0, math.rad(90) + spin)
-            swirl2.CFrame = lookCF * CFrame.Angles(0, 0, math.rad(90) - spin * 0.6)
+        while swirl.Parent do
+            spin = spin + 0.05
+            swirl.CFrame = lookCF * CFrame.Angles(0, 0, spin)
             RS.Heartbeat:Wait()
         end
     end)
     
-    m.PrimaryPart = oval
+    m.PrimaryPart = portal
     m.Parent = parent
-    return m, oval
+    return m, portal
 end
 
 _G.BarnyPortal.CreatePortal = CreatePortal
@@ -163,7 +166,7 @@ end
 
 _G.BarnyPortal.SetupTP = SetupTP
 
--- ========== ПУШКА (маленький зелёный блоб на белой подставке) ==========
+-- ========== ПУШКА (маленький блоб) ==========
 local function GivePortalGun()
     local char = LP.Character
     if not char then return end
@@ -173,7 +176,6 @@ local function GivePortalGun()
     tool.Name = "Portal Gun"
     tool.RequiresHandle = true
     
-    -- HANDLE — маленький зелёный блоб (как на картинке)
     local handle = Instance.new("Part")
     handle.Name = "Handle"
     handle.Size = Vector3.new(0.6, 0.8, 0.6)
@@ -182,7 +184,6 @@ local function GivePortalGun()
     handle.Shape = Enum.PartType.Ball
     handle.Parent = tool
     
-    -- Белая подставка (основание) — отдельная часть, приваренная
     local base = Instance.new("Part")
     base.Name = "Base"
     base.Size = Vector3.new(1.2, 0.4, 0.8)
@@ -196,7 +197,6 @@ local function GivePortalGun()
     w1.C0 = CFrame.new(0, -0.6, 0)
     w1.Parent = handle
     
-    -- Зелёный кристалл на подставке (главная часть — блоб)
     local crystal = Instance.new("Part")
     crystal.Name = "Crystal"
     crystal.Size = Vector3.new(0.7, 1.0, 0.7)
@@ -211,14 +211,12 @@ local function GivePortalGun()
     w2.C0 = CFrame.new(0, 0.3, 0)
     w2.Parent = handle
     
-    -- Свет от кристалла
     local light = Instance.new("PointLight")
     light.Color = _G.BarnyPortal.PortalColor
     light.Range = 10
     light.Brightness = 5
     light.Parent = crystal
     
-    -- Красная кнопка на подставке
     local button = Instance.new("Part")
     button.Name = "Button"
     button.Size = Vector3.new(0.15, 0.15, 0.15)
@@ -233,7 +231,6 @@ local function GivePortalGun()
     w3.C0 = CFrame.new(-0.4, -0.45, 0.3)
     w3.Parent = handle
     
-    -- Чёрная полоска (антенна) сверху
     local antenna = Instance.new("Part")
     antenna.Name = "Antenna"
     antenna.Size = Vector3.new(0.15, 0.5, 0.15)
@@ -360,7 +357,7 @@ local colorLabel = Instance.new("TextLabel")
 colorLabel.Size = UDim2.new(1, -60, 1, 0)
 colorLabel.Position = UDim2.new(0, 30, 0, 0)
 colorLabel.BackgroundTransparency = 1
-colorLabel.Text = Colors[1].name
+colorLabel.Text = Colors[_G.BarnyPortal.ColorIndex].name
 colorLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 colorLabel.Font = Enum.Font.Code
 colorLabel.TextSize = 11
@@ -415,4 +412,4 @@ modeBtn.MouseButton1Click:Connect(function()
     end
 end)
 
-print("[Barny] Часть 1/2 загружена (портал овальный + пушка-блоб)")
+print("[Barny] Часть 1/2 загружена (портал как на 2-й картинке)")
